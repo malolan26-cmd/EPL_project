@@ -1,0 +1,16 @@
+name: Refresh and validate season
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up --build --abort-on-container-exit --exit-code-from etl etl
+      - run: docker compose up -d db && docker compose exec -T db pg_dump -U football football > season_dump.sql
+      - uses: actions/upload-artifact@v4
+        with:
+          name: season-database
+          path: season_dump.sql

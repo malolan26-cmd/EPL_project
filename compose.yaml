@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: football
+      POSTGRES_PASSWORD: football
+      POSTGRES_DB: football
+    ports: ['5432:5432']
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL','pg_isready -U football']
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  etl:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://football:football@db:5432/football
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python etl.py
+  dashboard:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://football:football@db:5432/football
+    depends_on:
+      etl:
+        condition: service_completed_successfully
+    ports: ['8501:8501']
+    command: streamlit run app.py --server.address=0.0.0.0
+volumes:
+  pgdata:
